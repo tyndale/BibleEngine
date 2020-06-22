@@ -9,6 +9,9 @@
   },
   "dependencies": {
     "@bible-engine/core": "file:../core",
+    "@capacitor/android": "2.2.0",
+    "@capacitor/cli": "^2.2.0",
+    "@capacitor/core": "^2.2.0",
     "axios": "^0.19.2",
     "core-js": "^3.6.4",
     "vue": "^2.6.11",

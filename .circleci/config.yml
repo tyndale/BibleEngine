@@ -10,22 +10,25 @@ workflows:
             - test_migrations:
                   requires:
                       - build_yarn
+            - build_android:
+                  requires:
+                      - build_yarn
             - request_deploy_app:
                   type: approval
             - deploy_expo:
                   context: expo-credentials
                   requires:
-                    - request_deploy_app
-                    - test
-                    - test_migrations
+                      - request_deploy_app
+                      - test
+                      - test_migrations
             - deploy_ios:
                   context: expo-credentials
                   requires:
-                    - deploy_expo
+                      - deploy_expo
             - deploy_android:
                   context: expo-credentials
                   requires:
-                    - deploy_expo
+                      - deploy_expo
 jobs:
     build_yarn:
         docker:
@@ -91,11 +94,11 @@ jobs:
             - run: cd app && yarn install --frozen-lockfile
             - run: yarn global add expo-cli
             - run:
-                command: |
-                    export PATH="$PATH:$( yarn global bin )"
-                    cd app
-                    expo login --non-interactive -u technical@tyndalehouse.com
-                    EXPO_DEBUG=true expo publish --non-interactive --release-channel $(git rev-parse --short HEAD)
+                  command: |
+                      export PATH="$PATH:$( yarn global bin )"
+                      cd app
+                      expo login --non-interactive -u technical@tyndalehouse.com
+                      EXPO_DEBUG=true expo publish --non-interactive --release-channel $(git rev-parse --short HEAD)
     deploy_android:
         macos:
             xcode: 11.3.0
@@ -104,18 +107,18 @@ jobs:
             - run: cd ~ && git clone https://github.com/danbenn/step-bible-secrets.git
             - run: cp ~/step-bible-secrets/android_upload_key_secrets.json ~/secrets.json
             - restore_cache:
-                name: Restore Yarn Mac Package Cache
-                keys:
-                    - yarn-mac-{{ checksum "yarn.lock" }}
+                  name: Restore Yarn Mac Package Cache
+                  keys:
+                      - yarn-mac-{{ checksum "yarn.lock" }}
             - run: yarn install --frozen-lockfile
             - run: cd app && yarn install --frozen-lockfile
             - run: cd app && yarn expo login --non-interactive -u technical@tyndalehouse.com
             - run:
-                command: cd app && yarn expo build:android --non-interactive --no-publish --release-channel $(git rev-parse --short HEAD)
-                no_output_timeout: 30m
+                  command: cd app && yarn expo build:android --non-interactive --no-publish --release-channel $(git rev-parse --short HEAD)
+                  no_output_timeout: 30m
             - run:
-                command: cd app && yarn expo build:android --non-interactive --no-publish -t app-bundle --release-channel $(git rev-parse --short HEAD)
-                no_output_timeout: 30m
+                  command: cd app && yarn expo build:android --non-interactive --no-publish -t app-bundle --release-channel $(git rev-parse --short HEAD)
+                  no_output_timeout: 30m
             - run: cd app && yarn expo upload:android --non-interactive --key ~/secrets.json
     deploy_ios:
         macos:
@@ -136,6 +139,58 @@ jobs:
                       - app/node_modules
             - run: cd app && yarn expo login --non-interactive -u technical@tyndalehouse.com
             - run:
-                command: cd app && yarn expo build:ios --non-interactive --no-publish --release-channel $(git rev-parse --short HEAD)
-                no_output_timeout: 30m
+                  command: cd app && yarn expo build:ios --non-interactive --no-publish --release-channel $(git rev-parse --short HEAD)
+                  no_output_timeout: 30m
             - run: cd app && yarn expo upload:ios --non-interactive
+    build_android:
+        docker:
+            - image: circleci/android:api-29-node
+        environment:
+        JVM_OPTS: -Xmx3200m
+        working_directory:  ~/project/step-bible
+        steps:
+            - checkout
+            - restore_cache:
+                  name: Restore Node Modules Cache
+                  keys:
+                      - yarn-modules-{{ checksum "yarn.lock" }}
+            - run: yarn build
+            - run: npx cap sync
+            - restore_cache:
+                  key: jars-{{ checksum "android/build.gradle" }}-{{ checksum  "android/build.gradle" }}
+            - run:
+                  name: Chmod permissions #if permission for Gradlew Dependencies fail, use this.
+                  command: sudo chmod +x ./android/gradlew
+            - run:
+                  name: Download Dependencies
+                  command: cd android && ./gradlew androidDependencies --debug
+            - save_cache:
+                  paths:
+                      - ~/.gradle
+                  key: jars-{{ checksum "android/build.gradle" }}-{{ checksum  "android/build.gradle" }}
+            - run:
+                  name: Copy configuration files
+                  command: cp config/Android/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+            - run: # https://developer.android.com/studio/build/building-cmdline This creates an APK named module_name-debug.apk in project_name/module_name/build/outputs/apk/
+                  name: Build debug APK and release APK
+                  command: |
+                      cd android
+                      ./gradlew :app:assembleDebug
+                      ./gradlew :app:assembleRelease
+                      ./gradlew :app:assembleDebugAndroidTest
+            - run:
+                  name: Run Tests
+                  command: cd android && ./gradlew lint test
+            - store_artifacts: # for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+                  path: android/app/build/reports
+                  destination: reports
+            - store_artifacts: # for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+                  path: android/app/build/outputs/apk
+            # - store_artifacts: # for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+            #     path: android/app/src/main/assets/public
+            - store_test_results: # for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
+                  path: android/app/build/test-results
+            - persist_to_workspace:
+                  root: android/app/build/outputs
+                  paths:
+                      - ./apk/*
