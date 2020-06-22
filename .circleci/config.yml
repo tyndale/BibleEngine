@@ -156,6 +156,7 @@ jobs:
                   name: Restore Yarn Package Cache
                   keys:
                       - yarn-modules-{{ checksum "../yarn.lock" }}
+            - run: cd ../core && yarn build #build @bible-engine/core
             - run: yarn build
             - run: npx cap sync
             - restore_cache:
