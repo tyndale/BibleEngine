@@ -41,12 +41,14 @@ jobs:
                       - yarn-modules-{{ checksum "yarn.lock" }}
             - run: ls node_modules || yarn install --frozen-lockfile
             - run: ls app/node_modules || (cd app && yarn install --frozen-lockfile)
+            - run: ls step-bible/node_modules || (cd step-bible && yarn install --frozen-lockfile)
             - save_cache:
                   name: Save Yarn Package Cache
                   key: yarn-modules-{{ checksum "yarn.lock" }}
                   paths:
                       - node_modules
                       - app/node_modules
+                      - step-bible/node_modules
     test:
         docker:
             - image: circleci/node:13.5.0
@@ -146,12 +148,12 @@ jobs:
         docker:
             - image: circleci/android:api-29-node
         environment:
-        JVM_OPTS: -Xmx3200m
         working_directory:  ~/project/step-bible
         steps:
             - checkout
-            - restore_cache:
-                  name: Restore Node Modules Cache
+                path: ~/project
+             - restore_cache:
+                  name: Restore Yarn Package Cache
                   keys:
                       - yarn-modules-{{ checksum "yarn.lock" }}
             - run: yarn build
