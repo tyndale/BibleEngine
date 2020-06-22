@@ -48,6 +48,7 @@ jobs:
                   paths:
                       - node_modules
                       - app/node_modules
+                      - core/node_modules
                       - step-bible/node_modules
     test:
         docker:
