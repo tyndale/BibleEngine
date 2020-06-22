@@ -147,12 +147,11 @@ jobs:
     build_android:
         docker:
             - image: circleci/android:api-29-node
-        environment:
-        working_directory:  ~/project/step-bible
+        working_directory: ~/project/step-bible
         steps:
-            - checkout
-                path: ~/project
-             - restore_cache:
+            - checkout:
+                  path: ~/project
+            - restore_cache:
                   name: Restore Yarn Package Cache
                   keys:
                       - yarn-modules-{{ checksum "yarn.lock" }}
