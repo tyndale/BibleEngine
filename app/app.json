@@ -9,7 +9,7 @@
       "ios",
       "android"
     ],
-    "version": "2.1.0",
+    "version": "2.1.2",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
@@ -26,11 +26,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tyndale.step",
-      "buildNumber": "16"
+      "buildNumber": "17"
     },
     "android": {
       "package": "com.tyndale.stepbible",
-      "versionCode": 22
+      "versionCode": 23
     },
     "packagerOpts": {
       "sourceExts": [
